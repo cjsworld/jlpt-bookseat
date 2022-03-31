@@ -285,7 +285,7 @@ async function loop() {
             answerTime = now;
             answer = await _refreshImg();
             console.log("验证码：" + answer);
-            if (answer && answer.toUpperCase() == "EXIT") {
+            if (answer && answer == "EXIT") {
                 canExit = true;
                 console.log("退出流程");
                 return;
@@ -345,8 +345,10 @@ function stop() {
     canExit = true;
 }
 
-
+//报考等级
 var examLevel = 2;
-var targetAddr = ["1022101", "1022102"]; //https://jlpt.neea.cn/kdinfo.do?kdid=info
+
+//目标考场，可查询：https://jlpt.neea.cn/kdinfo.do?kdid=info
+var targetAddr = ["1022101", "1022102"];
 
 start();
