@@ -100,7 +100,7 @@ async function _refreshImg() {
                 }
                 user.set("chkImgSrc", h.chkImgFilename);
                 _consoleImage(h.chkImgFilename);
-                _answerCode = prompt("输入验证码");
+                let _answerCode = prompt("输入验证码");
                 if (_answerCode) {
                     _answerCode = _answerCode.toUpperCase();
                 }
@@ -120,6 +120,7 @@ async function _refreshImg() {
     });
 }
 
+var kdInfos = {};
 async function _chooseAddr() {
     user.set("bkjb", examLevel);
     return new Promise((fin) => {
@@ -156,6 +157,7 @@ async function _chooseAddr() {
                             canBook = kd;
                         }
                     }
+                    kdInfos[kd.dm] = kd.id;
                 }
                 if (!canBook) {
                     console.log("暂时没有空座位");
@@ -179,6 +181,7 @@ async function _chooseAddr() {
 }
 
 async function _bookseat(kd, code) {
+    user.set("bkjb", examLevel);
     let timeout = 5000;
     let timer = setTimeout(() => {
         timer = null;
@@ -186,8 +189,7 @@ async function _bookseat(kd, code) {
         fin(null);
     }, timeout);
     return new Promise((fin) => {
-        let b = kd.id;
-        user.set("bkkd", b);
+        user.set("bkkd", kd.id);
         new Ajax.Request(getURL("book.do"),{
             method: "post",
             requestHeaders: {
@@ -195,7 +197,7 @@ async function _bookseat(kd, code) {
             },
             parameters: serializeUser(["bkjb", "bkkd", "ksid", "ksIdNo", "chkImgFlag", "ksLoginFlag"]) + "&chkImgCode=" + code,
             onCreate: function() {
-                console.log("定座请求发送中...");
+                console.log("定座请求发送中...", kd);
             },
             onSuccess: function(e) {
                 if (timer) {
@@ -211,7 +213,6 @@ async function _bookseat(kd, code) {
                 }
                 console.log("book.do", h);
                 clearChkimgCache();
-                _answerCode = null;
                 fin(h);
             },
             onFailure: function() {
@@ -296,9 +297,17 @@ async function loop() {
             }
         }
         
+        
         if (!kd) {
             if (targetAddr.length == 1) {
-                kd = {id: targetAddr[0]};
+                let kdid = kdInfos[targetAddr[0]];
+                if (!kdid) {
+                    await _chooseAddr();
+                }
+                kdid = kdInfos[targetAddr[0]];
+                if (kdid) {
+                    kd = {id: kdid, dm: targetAddr[0]};
+                }
             } else {
                 kd = await _chooseAddr();
             }
@@ -317,6 +326,7 @@ async function loop() {
         answer = null;
         answerTime = 0;
         if (!r) {
+            await _delay(500);
             continue;
         } else if (r.retVal == 0) {
             console.log("订座失败：" + errorCode[r.errorNum]);
