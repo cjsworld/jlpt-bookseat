@@ -148,16 +148,22 @@ async function _chooseAddr() {
                     return
                 }
                 let kdInfo = $A(jsonObj);
+                let canBookList = {};
                 let canBook = null;
                 for (let i = 0; i < kdInfo.size(); ++i) {
                     let kd = kdInfo[i];
                     if (kd.vacancy > 0) {
                         console.log("找到有空座的考场", kd);
-                        if (targetAddr.indexOf(kd.dm) > 0) {
-                            canBook = kd;
-                        }
+                        canBookList[kd.dm] = kd;
                     }
                     kdInfos[kd.dm] = kd.id;
+                }
+                for (let i = 0; i < targetAddr.size(); ++i) {
+                    let t = targetAddr[i];
+                    if (canBookList[t]) {
+                        canBook = canBookList[t];
+                        break;
+                    }
                 }
                 if (!canBook) {
                     console.log("暂时没有空座位");
@@ -385,6 +391,6 @@ var examLevel = 2;
 
 //目标考场，可查询：https://jlpt.neea.cn/kdinfo.do?kdid=info
 //如果只填写一个，会直接尝试去订座。如果有多个，会通过接口去查询哪个有空座。在人多的时候，查询接口会卡。
-var targetAddr = ["1022102"];
+var targetAddr = ["1022102", "1023301", "1021701", "1021702"];
 
 start();
