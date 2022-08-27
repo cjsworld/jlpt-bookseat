@@ -314,6 +314,11 @@ async function loop() {
                 if (kdid) {
                     kd = {id: kdid, dm: targetAddr[0]};
                 }
+                //只有1个目标考场的时候，因为直接发请求，所以最好等时间到了再继续。
+                if (new Date().getTime() < startTime) {
+                    await _delay(200);
+                    continue;
+                }
             } else {
                 kd = await _chooseAddr();
             }
@@ -321,11 +326,6 @@ async function loop() {
                 await _delay(1000);
                 continue;
             }
-        }
-
-        if (new Date().getTime() < startTime) {
-            await _delay(200);
-            continue;
         }
 
         let r = await _bookseat(kd, answer);
@@ -391,6 +391,6 @@ var examLevel = 2;
 
 //目标考场，可查询：https://jlpt.neea.cn/kdinfo.do?kdid=info
 //如果只填写一个，会直接尝试去订座。如果有多个，会通过接口去查询哪个有空座。在人多的时候，查询接口会卡。
-var targetAddr = ["1022102", "1023301", "1021701", "1021702"];
+var targetAddr = ["1022102", "1023301", "1021701", "1021702", "1022801", "1023902", "1022202"];
 
 start();
