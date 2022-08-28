@@ -122,7 +122,6 @@ async function _refreshImg() {
 
 var kdInfos = {};
 async function _chooseAddr() {
-    user.set("bkjb", examLevel);
     return new Promise((fin) => {
         let timeout = 3000;
         let timer = setTimeout(() => {
@@ -130,6 +129,7 @@ async function _chooseAddr() {
             console.log('chooseAddr.do timed out after ' + timeout + ' ms');
             fin(null);
         }, timeout);
+        user.set("bkjb", examLevel);
         new Ajax.Request("chooseAddr.do?bkjb=" + user.get("bkjb"),{
             method: "get",
             requestHeaders: {
@@ -187,14 +187,14 @@ async function _chooseAddr() {
 }
 
 async function _bookseat(kd, code) {
-    user.set("bkjb", examLevel);
-    let timeout = 5000;
-    let timer = setTimeout(() => {
-        timer = null;
-        console.log('book.do timed out after ' + timeout + ' ms');
-        fin(null);
-    }, timeout);
     return new Promise((fin) => {
+        let timeout = 5000;
+        let timer = setTimeout(() => {
+            timer = null;
+            console.log('book.do timed out after ' + timeout + ' ms');
+            fin(null);
+        }, timeout);
+        user.set("bkjb", examLevel);
         user.set("bkkd", kd.id);
         new Ajax.Request(getURL("book.do"),{
             method: "post",
@@ -236,13 +236,13 @@ async function _bookseat(kd, code) {
 }
 
 async function _queryBook() {
-    let timeout = 5000;
-    let timer = setTimeout(() => {
-        timer = null;
-        console.log('queryBook.do timed out after ' + timeout + ' ms');
-        fin(null);
-    }, timeout);
     return new Promise((fin) => {
+        let timeout = 5000;
+        let timer = setTimeout(() => {
+            timer = null;
+            console.log('queryBook.do timed out after ' + timeout + ' ms');
+            fin(null);
+        }, timeout);
         new Ajax.Request(getURL("queryBook.do"),{
             method: "post",
             requestHeaders: {
