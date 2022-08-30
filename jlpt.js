@@ -196,7 +196,13 @@ async function _bookseat(kd, code) {
         }, timeout);
         user.set("bkjb", examLevel);
         user.set("bkkd", kd.id);
-        new Ajax.Request(getURL("book.do"),{
+        let url;
+        if (isChangeSeat) {
+            url = getURL("changebook.do");
+        } else {
+            url = getURL("book.do");
+        }
+        new Ajax.Request(url, {
             method: "post",
             requestHeaders: {
                 RequestType: "ajax"
@@ -343,6 +349,12 @@ async function loop() {
             }
             continue;
         }
+
+        if (isChangeSeat) {
+            console.log("改座成功！", kd);
+            //改座模式不需要查询
+            break;
+        }
         
         while (!canExit) {
             r = await _queryBook();
@@ -388,6 +400,9 @@ var startSecond = 0
 
 //报考等级
 var examLevel = 2;
+
+//是否改座模式
+var isChangeSeat = false;
 
 //目标考场，可查询：https://jlpt.neea.cn/kdinfo.do?kdid=info
 //如果只填写一个，会直接尝试去订座。如果有多个，会通过接口去查询哪个有空座。在人多的时候，查询接口会卡。
