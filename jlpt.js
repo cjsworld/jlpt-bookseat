@@ -320,11 +320,6 @@ async function loop() {
                 if (kdid) {
                     kd = {id: kdid, dm: targetAddr[0]};
                 }
-                //只有1个目标考场的时候，因为直接发请求，所以最好等时间到了再继续。
-                if (new Date().getTime() < startTime) {
-                    await _delay(200);
-                    continue;
-                }
             } else {
                 kd = await _chooseAddr();
             }
@@ -332,6 +327,12 @@ async function loop() {
                 await _delay(1000);
                 continue;
             }
+        }
+
+        //只有1个目标考场的时候，因为直接发请求，所以最好等时间到了再继续。
+        if (targetAddr.length == 1 && new Date().getTime() < startTime) {
+            await _delay(200);
+            continue;
         }
 
         let r = await _bookseat(kd, answer);
