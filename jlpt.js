@@ -1,59 +1,183 @@
-var errorCode = {};
-errorCode[100] = "网络错误或服务器繁忙";
-errorCode[101] = "会话已过期，请重新登录";
-errorCode[102] = "已经在其它地方登录,请求被拒绝";
-errorCode[103] = "非法请求";
-errorCode[104] = "参数错误";
-errorCode[105] = "登录次数过多";
-errorCode[106] = "操作次数过多";
-errorCode[107] = "查询失败，不存在的账户";
-errorCode[108] = "密码问题回答错误";
-errorCode[109] = "查询失败";
-errorCode[200] = "证件号或密码错误";
-errorCode[201] = "此证件号已被删除";
-errorCode[202] = "注册请求不被接受";
-errorCode[203] = "此证件号已经被注册";
-errorCode[204] = "注册请求执行错误";
-errorCode[205] = "报名尚未开始";
-errorCode[206] = "报名已经结束";
-errorCode[207] = "此手机号码已经被注册";
-errorCode[208] = "此电子邮箱地址已经被注册";
-errorCode[209] = "短信验证码不正确或已过期";
-errorCode[210] = "更新考生信息请求执行失败";
-errorCode[211] = "删除考生信息请求执行失败";
-errorCode[212] = "两次密码输入不符";
-errorCode[213] = "更新报名表请求执行失败";
-errorCode[214] = "母语代码输入不正确";
-errorCode[215] = "用户名或密码错误次数过多，账户被锁定";
-errorCode[216] = "用户名或密码错误次数过多，账户被锁定30分钟";
-errorCode[217] = "上传照片功能关闭";
-errorCode[250] = "请输入您的证件号";
-errorCode[251] = "您输入的证件号不存在";
-errorCode[252] = "更改座位请求无法被执行";
-errorCode[300] = "加入队列失败";
-errorCode[301] = "此级别不允许定座";
-errorCode[303] = "提交的考生id与缓存中不一致";
-errorCode[304] = "考生已经预定了座位";
-errorCode[305] = "验证码过期";
-errorCode[306] = "验证码输入错误,请重新输入";
-errorCode[307] = "不符合更改考点条件";
-errorCode[308] = "更改考点请求不被接受";
-errorCode[310] = "请求排队中...";
-errorCode[311] = "无定座请求";
-errorCode[313] = "该考点已无剩余座位";
-errorCode[314] = "错误的定座请求";
-errorCode[315] = "缓存不同步";
-errorCode[316] = "查询重试";
-errorCode[317] = "查询重试次数过多";
-errorCode[320] = "错误的取消预定请求";
-errorCode[321] = "取消请求不被接受";
-errorCode[330] = "验证签名错误";
-errorCode[331] = "无效的登录状态";
-errorCode[332] = "更新照片失败";
-
-function _consoleImage(url) {
-    console.log('%c ', 'padding:13px 40px; font-size: 0; background:url("' + url + '"); no-repeat;')
+var examLevel = localStorage.getItem("tool_examLevel");
+if (!examLevel) {
+    examLevel = 1;
+} else {
+    examLevel = parseInt(examLevel);
 }
+
+function _onExamLevelChange(v) {
+    examLevel = parseInt(v);
+    kdInfos = {}; //更改报考等级需要清空缓存的考点信息
+    localStorage.setItem("tool_examLevel", examLevel);
+}
+
+var isChangeSeat = localStorage.getItem("tool_isChangeSeat") == "true";
+
+function _onIsChangeSeatChange(v) {
+    isChangeSeat = v;
+    localStorage.setItem("tool_isChangeSeat", v ? "true" : "false");
+}
+
+function _onIsChangeSeatHelp() {
+    alert("1、订座成功后有且仅有一次改座机会。\n2、改座失败不影响当前订座。\n3、目标考场不要包含已报考场。");
+}
+
+var fastTryAddr = localStorage.getItem("tool_fastTryAddr");
+if (!fastTryAddr) {
+    fastTryAddr = [];
+} else {
+    fastTryAddr = JSON.parse(fastTryAddr);
+}
+
+function _onFastTryAddrChange(v) {
+    fastTryAddr = v.split(',').map(item => item.trim()).filter(item => item !== '');
+    localStorage.setItem("tool_fastTryAddr", JSON.stringify(fastTryAddr));
+}
+
+function _onFastTryAddrHelp() {
+    alert("填写考点代号，用英文逗号分隔，例如：\n\n1020101,1020103,1020105\n\n1、因为在人多的时候，查询接口会卡。而第一天往往所有考场都是有座位的，所以可以跳过查询直接订座。\n2、可以在这里填写考场，会自动卡时间，2点开始，按照顺序尝试直接订座。注意每次订座都需要消耗验证码。");
+}
+
+var targetAddr = localStorage.getItem("tool_targetAddr");
+if (!targetAddr) {
+    targetAddr = [];
+} else {
+    targetAddr = JSON.parse(targetAddr);
+}
+
+function _onTargetAddrChange(v) {
+    targetAddr = v.split(',').map(item => item.trim());
+    localStorage.setItem("tool_targetAddr", JSON.stringify(targetAddr));
+}
+
+function _onTargetAddrHelp() {
+    alert("填写考点代号，用英文逗号分隔，例如：\n\n1020101,1020103,1020105\n\n会通过接口去查询哪个有空座，然后按照列表的优先顺序选择有空座的考场。");
+}
+
+//报考开始时间
+const startHour = 14
+const startMinite = 0
+const startSecond = 0
+
+let offsetX, offsetY, initialX, initialY;
+
+let toolWindow;
+function _initGUI() {
+    toolWindow = document.getElementById('tool-window');
+    if (!toolWindow) {
+        toolWindow = document.createElement("div");
+        toolWindow.id = "tool-window";
+        toolWindow.style = "position: absolute; right: 50px; bottom: 50px; width: 700px; height: 500px; background-color: #ccc; z-index: 999";
+        toolWindow.innerHTML = `
+        <div id="tool-title" style="background-color: aqua; margin: 5px; text-align:center; cursor: move;">JLPT抢座脚本(可拖动)</div>
+        <div style="width: 250px; display: inline-block; vertical-align: top">
+            <div style="margin: 10px">
+                <label>报考等级：</label>
+                <select id="tool-examLevel" onchange="_onExamLevelChange(document.getElementById('tool-examLevel').value)">
+                    <option value="1">N1</option>
+                    <option value="2">N2</option>
+                    <option value="3">N3</option>
+                    <option value="4">N4</option>
+                    <option value="5">N5</option>
+                </select>
+                <a href="https://jlpt.neea.cn/kdinfo.do?kdid=info" target="_blank" style="margin-left: 5px">查看考场列表</a>
+            </div>
+            <div style="margin: 10px">
+                <input id="tool-changeSeat" type="checkbox" onchange="_onIsChangeSeatChange(document.getElementById('tool-changeSeat').checked)">改座模式</input>
+                <a onclick="_onIsChangeSeatHelp()" style="cursor: pointer; margin-left: 10px">？</a>
+            </div>
+            <div style="margin: 10px">
+                <label>快速抢座考场：</label>
+                <a onclick="_onFastTryAddrHelp()" style="cursor: pointer">？</a>
+                <textarea id="tool-fastTryAddr" rows="5" style="resize: none; width: 100%;" onchange="_onFastTryAddrChange(document.getElementById('tool-fastTryAddr').value)"></textarea>
+            </div>
+            <div style="margin: 10px">
+                <label>目标考场：</label>
+                <a onclick="_onTargetAddrHelp()" style="cursor: pointer">？</a>
+                <textarea id="tool-targetAddr" rows="5" style="resize: none; width: 100%;" onchange="_onTargetAddrChange(document.getElementById('tool-targetAddr').value)"></textarea>
+            </div>
+            <div style="margin: 10px">
+                <button id="tool-start" onclick="start()" style="margin: 10px">开始</label>
+                <button id="tool-stop" onclick="stop()" style="margin: 10px">停止</label>
+            </div>
+            <div style="margin: 10px">
+                <label>验证码：</label>
+                <img id="tool-chkImg" border="1" alt="验证码" width="80" height="25">
+                <br/>
+                <label>答案(回车提交)：</label>
+                <input id="tool-chkImgAns" style="width: 100px" onkeydown="_handleChkImgKeyDown(event)" ></input>
+            </div>
+        </div>
+        <div style="width: 400px; height: 100%; display: inline-block; vertical-align: top">
+            <div style="margin: 10px">
+                <label>日志：</label>
+                <button onclick="_clearLog()" style="margin-left: 10px">清空</button>
+                <textarea id="tool-log" rows="25" wrap="off" style="resize: none; width: 100%"></textarea>
+            </div>
+        </div>
+        `;
+        document.body.append(toolWindow);
+
+        document.getElementById('tool-examLevel').value = examLevel;
+        document.getElementById('tool-changeSeat').checked = isChangeSeat;
+        document.getElementById('tool-fastTryAddr').value = fastTryAddr.join(",");
+        document.getElementById('tool-targetAddr').value = targetAddr.join(",");
+        document.getElementById('tool-stop').disabled = true;
+
+        //增加拖动的功能
+        let dragger = document.getElementById("tool-title");
+
+        // 当鼠标按下时
+        dragger.addEventListener('mousedown', function (e) {
+            // 计算初始位置
+            offsetX = e.clientX - toolWindow.offsetLeft;
+            offsetY = e.clientY - toolWindow.offsetTop;
+            initialX = toolWindow.offsetLeft;
+            initialY = toolWindow.offsetTop;
+
+            // 当鼠标移动时
+            document.addEventListener('mousemove', _dragWindow);
+            // 当鼠标松开时
+            document.addEventListener('mouseup', _stopDragWindow);
+        });
+    }
+}
+
+function _dragWindow(e) {
+    // 计算当前位置
+    const currentX = e.clientX - offsetX;
+    const currentY = e.clientY - offsetY;
+
+    // 将悬浮窗移动到当前位置
+    toolWindow.style.left = currentX + 'px';
+    toolWindow.style.top = currentY + 'px';
+}
+
+function _stopDragWindow() {
+    // 当鼠标松开时，移除事件监听器
+    document.removeEventListener('mousemove', _dragWindow);
+    document.removeEventListener('mouseup', _stopDragWindow);
+}
+
+function _log(msg, obj) {
+    let str;
+    if (obj) {
+        str = msg + ": " + JSON.stringify(obj) + "\n";
+        console.log(msg, obj);
+    } else {
+        str = msg + "\n";
+        console.log(msg);
+    }
+    let logView = document.getElementById('tool-log');
+    logView.value += str;
+    logView.scrollTop = logView.scrollHeight;
+}
+
+function _clearLog() {
+    document.getElementById('tool-log').value = '';
+}
+
+_initGUI();
 
 async function _delay(timeountMS) {
     return new Promise((fin) => {
@@ -61,8 +185,30 @@ async function _delay(timeountMS) {
     });
 }
 
+var chkImgAnsPromise = null;
+
+function _handleChkImgKeyDown(event) {
+    if (event.key === 'Enter') {
+        let inputValue = event.target.value;
+        if (inputValue) {
+            inputValue = inputValue.trim().toUpperCase();
+        }
+        event.target.value = '';
+
+        if (chkImgAnsPromise) {
+            let fin = chkImgAnsPromise;
+            chkImgAnsPromise = null;
+            document.getElementById("tool-chkImg").src = "";
+            fin(inputValue);
+        } else if (inputValue == "EXIT" && !canExit) {
+            stop();
+        }
+    }
+}
+
 async function _refreshImg() {
     return new Promise((fin) => {
+        chkImgAnsPromise = null;
         let a = user.get("chkImgFlag");
         if (!a) {
             a = generateRandomFlag(18);
@@ -71,7 +217,7 @@ async function _refreshImg() {
         let timeout = 2000;
         let timer = setTimeout(() => {
             timer = null;
-            console.log('chkImg.do timed out after ' + timeout + ' ms');
+            _log('chkImg.do timed out after ' + timeout + ' ms');
             fin(null);
         }, timeout);
         new Ajax.Request(getURL("chkImg.do"), {
@@ -80,7 +226,7 @@ async function _refreshImg() {
             requestHeaders: {
                 RequestType: "ajax"
             },
-            onSuccess: function(g) {
+            onSuccess: function (g) {
                 if (timer) {
                     clearTimeout(timer);
                     timer = null;
@@ -92,28 +238,27 @@ async function _refreshImg() {
                     g.request.options.onFailure();
                     return
                 }
-                console.log("chkImg.do", h);
+                _log("chkImg.do", h);
                 if (!h.retVal) {
-                    console.log("获取验证码失败：" + errorCode[h.errorNum]);
+                    _log("获取验证码失败：" + errorCode[h.errorNum]);
                     fin(null);
                     return
                 }
                 user.set("chkImgSrc", h.chkImgFilename);
-                _consoleImage(h.chkImgFilename);
-                let _answerCode = prompt("输入验证码");
-                if (_answerCode) {
-                    _answerCode = _answerCode.toUpperCase();
-                }
-                fin(_answerCode);
+                document.getElementById("tool-chkImg").src = h.chkImgFilename;
+                _log("【【【请输入验证码】】】");
+                document.getElementById("tool-chkImgAns").value = "";
+                document.getElementById("tool-chkImgAns").focus();
+                chkImgAnsPromise = fin;
             },
-            onFailure: function(g) {
+            onFailure: function (g) {
                 if (timer) {
                     clearTimeout(timer);
                     timer = null;
                 } else {
                     return;
                 }
-                console.log("获取验证码失败，请点击验证码重新获取!");
+                _log("获取验证码失败，请点击验证码重新获取!");
                 fin(null);
             }
         })
@@ -121,21 +266,21 @@ async function _refreshImg() {
 }
 
 var kdInfos = {};
-async function _chooseAddr() {
+async function _chooseAddr(onlyQuery) {
     return new Promise((fin) => {
         let timeout = 3000;
         let timer = setTimeout(() => {
             timer = null;
-            console.log('chooseAddr.do timed out after ' + timeout + ' ms');
+            _log('chooseAddr.do timed out after ' + timeout + ' ms');
             fin(null);
         }, timeout);
         user.set("bkjb", examLevel);
-        new Ajax.Request("chooseAddr.do?bkjb=" + user.get("bkjb"),{
+        new Ajax.Request("chooseAddr.do?bkjb=" + user.get("bkjb"), {
             method: "get",
             requestHeaders: {
                 RequestType: "ajax"
             },
-            onSuccess: function(originalRequest) {
+            onSuccess: function (originalRequest) {
                 if (timer) {
                     clearTimeout(timer);
                     timer = null;
@@ -152,8 +297,8 @@ async function _chooseAddr() {
                 let canBook = null;
                 for (let i = 0; i < kdInfo.size(); ++i) {
                     let kd = kdInfo[i];
-                    if (kd.vacancy > 0) {
-                        console.log("找到有空座的考场", kd);
+                    if (kd.vacancy > 0 && !onlyQuery) {
+                        _log("找到有空座的考场", kd);
                         canBookList[kd.dm] = kd;
                     }
                     kdInfos[kd.dm] = kd.id;
@@ -165,21 +310,23 @@ async function _chooseAddr() {
                         break;
                     }
                 }
-                if (!canBook) {
-                    console.log("暂时没有空座位");
-                } else {
-                    console.log("目标考场", canBook);
+                if (!onlyQuery) {
+                    if (!canBook) {
+                        _log("暂时没有空座位");
+                    } else {
+                        _log("目标考场", canBook);
+                    }
                 }
                 fin(canBook);
             },
-            onFailure: function(originalRequest) {
+            onFailure: function (originalRequest) {
                 if (timer) {
                     clearTimeout(timer);
                     timer = null;
                 } else {
                     return;
                 }
-                console.log("查询考点信息失败");
+                _log("查询考点信息失败");
                 fin(null);
             }
         })
@@ -191,7 +338,7 @@ async function _bookseat(kd, code) {
         let timeout = 5000;
         let timer = setTimeout(() => {
             timer = null;
-            console.log('book.do timed out after ' + timeout + ' ms');
+            _log('book.do timed out after ' + timeout + ' ms');
             fin(null);
         }, timeout);
         user.set("bkjb", examLevel);
@@ -208,10 +355,10 @@ async function _bookseat(kd, code) {
                 RequestType: "ajax"
             },
             parameters: serializeUser(["bkjb", "bkkd", "ksid", "ksIdNo", "chkImgFlag", "ksLoginFlag"]) + "&chkImgCode=" + code,
-            onCreate: function() {
-                console.log("定座请求发送中...", kd);
+            onCreate: function () {
+                _log("定座请求发送中...", kd);
             },
-            onSuccess: function(e) {
+            onSuccess: function (e) {
                 if (timer) {
                     clearTimeout(timer);
                     timer = null;
@@ -223,18 +370,18 @@ async function _bookseat(kd, code) {
                     e.request.options.onFailure();
                     return
                 }
-                console.log("book.do", h);
+                _log(isChangeSeat ? "changebook.do" : "book.do", h);
                 clearChkimgCache();
                 fin(h);
             },
-            onFailure: function() {
+            onFailure: function () {
                 if (timer) {
                     clearTimeout(timer);
                     timer = null;
                 } else {
                     return;
                 }
-                console.log("定座请求失败");
+                _log("定座请求失败");
                 fin(null);
             }
         })
@@ -246,19 +393,19 @@ async function _queryBook() {
         let timeout = 5000;
         let timer = setTimeout(() => {
             timer = null;
-            console.log('queryBook.do timed out after ' + timeout + ' ms');
+            _log('queryBook.do timed out after ' + timeout + ' ms');
             fin(null);
         }, timeout);
-        new Ajax.Request(getURL("queryBook.do"),{
+        new Ajax.Request(getURL("queryBook.do"), {
             method: "post",
             requestHeaders: {
                 RequestType: "ajax"
             },
             parameters: serializeUser(["ksid", "ksIdNo", "ksLoginFlag"]),
-            onCreate: function() {
-                layer.setMsg("定座请求结果查询中...")
+            onCreate: function () {
+                _log("定座请求结果查询中...");
             },
-            onSuccess: function(l) {
+            onSuccess: function (l) {
                 if (timer) {
                     clearTimeout(timer);
                     timer = null;
@@ -270,17 +417,17 @@ async function _queryBook() {
                     l.request.options.onFailure();
                     return
                 }
-                console.log("queryBook.do", m);
+                _log("queryBook.do", m);
                 fin(m);
             },
-            onFailure: function() {
+            onFailure: function () {
                 if (timer) {
                     clearTimeout(timer);
                     timer = null;
                 } else {
                     return;
                 }
-                console.log("定座请求结果查询中失败");
+                _log("定座请求结果查询中失败");
                 fin(null);
             }
         });
@@ -293,35 +440,51 @@ async function loop() {
     let answer = null;
     let answerTime = 0;
     let kd = null;
+    let fastTryList = fastTryAddr.slice();
     let startTime = new Date().setHours(startHour, startMinite, startSecond, 0);
+
+    _log("开始工作，当前报考等级：" + examLevel);
 
     while (!canExit) {
         let now = new Date().getTime();
         while (!answer/* || (now - answerTime >= 1000 * 60 * 3)*/) {
-            answer = null;
             answerTime = now;
             answer = await _refreshImg();
-            console.log("验证码：" + answer);
-            if (answer && answer == "EXIT") {
-                canExit = true;
-                console.log("退出流程");
-                return;
+            if (answer && answer.length == 4) {
+                _log("验证码：" + answer);
+                break;
+            } else {
+                answer = null;
             }
         }
         
-        
+        if (answer == "EXIT") {
+            canExit = true;
+            break;
+        }
+
         if (!kd) {
-            if (targetAddr.length == 1) {
-                let kdid = kdInfos[targetAddr[0]];
-                if (!kdid) {
-                    await _chooseAddr();
+            if (fastTryList.length > 0) {
+                if (Object.keys(kdInfos).length == 0) {
+                    _log("查询考点信息");
+                    await _chooseAddr(true);
+                    if (Object.keys(kdInfos).length == 0) {
+                        await _delay(500);
+                        _log("查询考点信息失败");
+                        continue;
+                    }
                 }
-                kdid = kdInfos[targetAddr[0]];
+                _log("###尝试直接订座：" + fastTryList[0]);
+                let kdid = kdInfos[fastTryList[0]];
                 if (kdid) {
-                    kd = {id: kdid, dm: targetAddr[0]};
+                    kd = { id: kdid, dm: fastTryList[0] };
+                } else {
+                    _log("考点不存在：" + fastTryList[0]);
+                    fastTryList = fastTryList.slice(1);
+                    continue;
                 }
             } else {
-                kd = await _chooseAddr();
+                kd = await _chooseAddr(false);
             }
             if (!kd) {
                 await _delay(1000);
@@ -330,7 +493,7 @@ async function loop() {
         }
 
         //只有1个目标考场的时候，因为直接发请求，所以最好等时间到了再继续。
-        if (targetAddr.length == 1 && new Date().getTime() < startTime) {
+        if (fastTryList.length > 0 && new Date().getTime() < startTime) {
             await _delay(200);
             continue;
         }
@@ -342,27 +505,31 @@ async function loop() {
             await _delay(500);
             continue;
         } else if (r.retVal == 0) {
-            console.log("订座失败：" + errorCode[r.errorNum]);
+            _log("订座失败：" + errorCode[r.errorNum]);
             if (r.errorNum == 305 || r.errorNum == 306) {
                 //验证码过期或错误
             } else {
                 kd = null;
+                if (fastTryList.length > 0) {
+                    fastTryList = fastTryList.slice(1)
+                }
             }
             continue;
         }
 
         if (isChangeSeat) {
-            console.log("改座成功！", kd);
             //改座模式不需要查询
+            _log("改座成功！", kd);
+            canExit = true;
             break;
         }
-        
+
         while (!canExit) {
             r = await _queryBook();
             if (!r) {
                 continue;
             } else if (r.retVal == 0) {
-                console.log("订座查询显示失败", errorCode[r.errorNum]);
+                _log("订座查询显示失败", errorCode[r.errorNum]);
                 if (r.errorNum == 310) {
                     //重试
                     await _delay(200);
@@ -370,43 +537,54 @@ async function loop() {
                 } else if (r.errorNum == 313) {
                     //满了
                     kd = null;
+                    if (fastTryList.length > 0) {
+                        fastTryList = fastTryList.slice(1)
+                    }
                     break;
                 } else {
+                    //查询失败了，需要重新订座
                     break;
                 }
             } else {
-                console.log("预定成功！", kd);
+                _log("预定成功！", kd);
                 canExit = true;
                 break;
             }
         }
     }
-    console.log("停止");
+
+    _log("已停止");
+    stop();
 }
 
+
 function start() {
+    document.getElementById('tool-examLevel').disabled = true;
+    document.getElementById('tool-changeSeat').disabled = true;
+    document.getElementById('tool-fastTryAddr').disabled = true;
+    document.getElementById('tool-targetAddr').disabled = true;
+    document.getElementById('tool-start').disabled = true;
+    document.getElementById('tool-stop').disabled = false;
+    document.getElementById("tool-chkImg").src = "";
+    document.getElementById("tool-chkImgAns").value = "";
+
+    _clearLog();
     canExit = false;
     loop();
 }
 
 function stop() {
     canExit = true;
+    document.getElementById('tool-examLevel').disabled = false;
+    document.getElementById('tool-changeSeat').disabled = false;
+    document.getElementById('tool-fastTryAddr').disabled = false;
+    document.getElementById('tool-targetAddr').disabled = false;
+    document.getElementById('tool-start').disabled = false;
+    document.getElementById('tool-stop').disabled = true;
+    document.getElementById("tool-chkImg").src = "";
+    document.getElementById("tool-chkImgAns").value = "";
+    if (chkImgAnsPromise) {
+        chkImgAnsPromise("EXIT");
+        chkImgAnsPromise = null;
+    }
 }
-
-
-//报考开始时间
-var startHour = 14
-var startMinite = 0
-var startSecond = 0
-
-//报考等级
-var examLevel = 2;
-
-//是否改座模式
-var isChangeSeat = false;
-
-//目标考场，可查询：https://jlpt.neea.cn/kdinfo.do?kdid=info
-//如果只填写一个，会直接尝试去订座。如果有多个，会通过接口去查询哪个有空座。在人多的时候，查询接口会卡。
-var targetAddr = ["1022102", "1023301", "1021701", "1021702", "1022801", "1023902", "1022202"];
-
-start();
