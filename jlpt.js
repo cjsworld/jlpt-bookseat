@@ -307,7 +307,7 @@ async function _refreshImg() {
 
                 let useOcr = ocrOn && ocrUrl && ocrUrl.length > 0;
                 let startTime = new Date().setHours(startHour, startMinite, startSecond, 0);
-                if (new Date().getTime() < startTime) {
+                if (useOcr && new Date().getTime() < startTime) {
                     //自动识别存在失误的概率，为了增加2点刚开始时候的抢座成功率，手动输入一个正确答案
                     _log("当前未到订座时间，请手动输入验证码确保成功率");
                     useOcr = false;
