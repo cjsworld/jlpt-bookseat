@@ -54,6 +54,27 @@ function _onTargetAddrHelp() {
     alert("填写考点代号，用英文逗号分隔，例如：\n\n1020101,1020103,1020105\n\n会通过接口去查询哪个有空座，然后按照列表的优先顺序选择有空座的考场。");
 }
 
+var ocrOn = localStorage.getItem("tool_ocrOn") == "true";
+
+function _onIsOcrOnChange(v) {
+    ocrOn = v;
+    localStorage.setItem("tool_ocrOn", v ? "true" : "false");
+}
+
+var ocrUrl = localStorage.getItem("tool_ocrUrl");
+if (!ocrUrl) {
+    ocrUrl = "http://localhost:5000/ocr";
+}
+
+function _onOcrUrlChange(v) {
+    ocrUrl = v;
+    localStorage.setItem("tool_ocrUrl", ocrUrl);
+}
+
+function _onOcrHelp() {
+    alert("1、可以用一些OCR方法自动识别验证码。\n2、参考说明搭建，填入url，勾选开关。\n3、自动识别准确率有限，网络高峰期可能导致刷新验证码较慢。");
+}
+
 //报考开始时间
 const startHour = 14
 const startMinite = 0
@@ -83,7 +104,8 @@ function _initGUI() {
                 <a href="https://jlpt.neea.cn/kdinfo.do?kdid=info" target="_blank" style="margin-left: 5px">查看考场列表</a>
             </div>
             <div style="margin: 10px">
-                <input id="tool-changeSeat" type="checkbox" onchange="_onIsChangeSeatChange(document.getElementById('tool-changeSeat').checked)">改座模式</input>
+                <label>改座模式：</label>
+                <input id="tool-changeSeat" type="checkbox" onchange="_onIsChangeSeatChange(document.getElementById('tool-changeSeat').checked)">启用</input>
                 <a onclick="_onIsChangeSeatHelp()" style="cursor: pointer; margin-left: 10px">？</a>
             </div>
             <div style="margin: 10px">
@@ -102,10 +124,13 @@ function _initGUI() {
             </div>
             <div style="margin: 10px">
                 <label>验证码：</label>
-                <img id="tool-chkImg" border="1" alt="验证码" width="80" height="25">
-                <br/>
+                <img id="tool-chkImg" border="1" alt="验证码" width="80" height="25"><br/>
                 <label>答案(回车提交)：</label>
-                <input id="tool-chkImgAns" style="width: 100px" onkeydown="_handleChkImgKeyDown(event)" ></input>
+                <input id="tool-chkImgAns" style="width: 100px" onkeydown="_handleChkImgKeyDown(event)"></input>
+                <label>自动识别：</label>
+                <a onclick="_onOcrHelp()" style="cursor: pointer">？</a>
+                <input id="tool-ocrOn" type="checkbox" onchange="_onIsOcrOnChange(document.getElementById('tool-ocrOn').checked)">启用</input><br/>
+                <input id="tool-ocrUrl" style="width: 100%" onchange="_onOcrUrlChange(document.getElementById('tool-ocrUrl').value)"></input>
             </div>
         </div>
         <div style="width: 400px; height: 100%; display: inline-block; vertical-align: top">
@@ -122,6 +147,8 @@ function _initGUI() {
         document.getElementById('tool-changeSeat').checked = isChangeSeat;
         document.getElementById('tool-fastTryAddr').value = fastTryAddr.join(",");
         document.getElementById('tool-targetAddr').value = targetAddr.join(",");
+        document.getElementById('tool-ocrOn').checked = ocrOn;
+        document.getElementById('tool-ocrUrl').value = ocrUrl;
         document.getElementById('tool-stop').disabled = true;
 
         //增加拖动的功能
@@ -206,7 +233,37 @@ function _handleChkImgKeyDown(event) {
     }
 }
 
+async function _tryOCR(url) {
+    let xhr = new XMLHttpRequest();
+    xhr.open('GET', `${ocrUrl}?url=${url}`);
+    xhr.onload = function() {
+      if (xhr.status === 200) {
+        let fin = chkImgAnsPromise;
+        chkImgAnsPromise = null;
+        if (fin) {
+            let ans = xhr.responseText;
+            if (ans.length == 4) {
+                fin(ans.toUpperCase());
+            } else {
+                _log("验证码OCR识别失败");
+                fin(null);
+            }
+        }
+      }
+    };
+    xhr.onerror = () => {
+        _log("验证码OCR请求失败");
+        let fin = chkImgAnsPromise;
+        chkImgAnsPromise = null;
+        if (fin) {
+            fin(null);
+        }
+    }
+    xhr.send();
+}
+
 async function _refreshImg() {
+    document.getElementById("tool-chkImg").src = "";
     return new Promise((fin) => {
         chkImgAnsPromise = null;
         let a = user.get("chkImgFlag");
@@ -245,11 +302,26 @@ async function _refreshImg() {
                     return
                 }
                 user.set("chkImgSrc", h.chkImgFilename);
-                document.getElementById("tool-chkImg").src = h.chkImgFilename;
-                _log("【【【请输入验证码】】】");
-                document.getElementById("tool-chkImgAns").value = "";
-                document.getElementById("tool-chkImgAns").focus();
+                
                 chkImgAnsPromise = fin;
+
+                let useOcr = ocrOn && ocrUrl && ocrUrl.length > 0;
+                let startTime = new Date().setHours(startHour, startMinite, startSecond, 0);
+                if (new Date().getTime() < startTime) {
+                    //自动识别存在失误的概率，为了增加2点刚开始时候的抢座成功率，手动输入一个正确答案
+                    _log("当前未到订座时间，请手动输入验证码确保成功率");
+                    useOcr = false;
+                }
+
+                if (useOcr) {
+                    _log("尝试自动识别验证码...");
+                    _tryOCR(h.chkImgFilename);
+                } else {
+                    document.getElementById("tool-chkImg").src = h.chkImgFilename;
+                    _log("【【【请输入验证码】】】");
+                    document.getElementById("tool-chkImgAns").value = "";
+                    document.getElementById("tool-chkImgAns").focus();
+                }
             },
             onFailure: function (g) {
                 if (timer) {
@@ -442,12 +514,15 @@ async function loop() {
     let kd = null;
     let fastTryList = fastTryAddr.slice();
     let startTime = new Date().setHours(startHour, startMinite, startSecond, 0);
+    let waitHint = false;
 
     _log("开始工作，当前报考等级：" + examLevel);
 
     while (!canExit) {
         let now = new Date().getTime();
-        while (!answer/* || (now - answerTime >= 1000 * 60 * 3)*/) {
+        while (!canExit && (!answer || (now - answerTime > 1000 * 60 * 5))) {
+            //实测5分钟的验证码是可以用的，10分钟会导致验证码已过期
+            answer = null;
             answerTime = now;
             answer = await _refreshImg();
             if (answer && answer.length == 4) {
@@ -458,7 +533,7 @@ async function loop() {
             }
         }
         
-        if (answer == "EXIT") {
+        if (!answer || answer == "EXIT") {
             canExit = true;
             break;
         }
@@ -494,6 +569,10 @@ async function loop() {
 
         //只有1个目标考场的时候，因为直接发请求，所以最好等时间到了再继续。
         if (fastTryList.length > 0 && new Date().getTime() < startTime) {
+            if (!waitHint) {
+                _log(`时间还没到，等到${startHour}:${startMinite}:${startSecond}之后自动开始...`);
+                waitHint = true;
+            }
             await _delay(200);
             continue;
         }
