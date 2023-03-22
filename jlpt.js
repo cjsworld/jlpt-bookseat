@@ -11,6 +11,20 @@ function _onExamLevelChange(v) {
     localStorage.setItem("tool_examLevel", examLevel);
 }
 
+var _username = localStorage.getItem("tool_username");
+
+function _onUsernameChange(v) {
+    _username = v;
+    localStorage.setItem("tool_username", v);
+}
+
+var _password = localStorage.getItem("tool_password");
+
+function _onPasswordChange(v) {
+    _password = v;
+    localStorage.setItem("tool_password", v);
+}
+
 var isChangeSeat = localStorage.getItem("tool_isChangeSeat") == "true";
 
 function _onIsChangeSeatChange(v) {
@@ -88,9 +102,12 @@ function _initGUI() {
     if (!toolWindow) {
         toolWindow = document.createElement("div");
         toolWindow.id = "tool-window";
-        toolWindow.style = "position: absolute; right: 50px; bottom: 50px; width: 700px; height: 500px; background-color: #ccc; z-index: 999";
+        toolWindow.style = "position: absolute; right: 50px; bottom: 50px; width: 700px; height: 600px; background-color: #ccc; z-index: 999";
         toolWindow.innerHTML = `
-        <div id="tool-title" style="background-color: aqua; margin: 5px; text-align:center; cursor: move;">JLPT抢座脚本(可拖动)</div>
+        <div id="tool-title" style="background-color: aqua; margin: 5px; text-align:center; cursor: move">
+            <div>JLPT抢座脚本(可拖动)</div>
+            <button onclick="_closeGUI()" style="position: absolute; right: 5px; top: 5px">X</button>
+        </div>
         <div style="width: 250px; display: inline-block; vertical-align: top">
             <div style="margin: 10px">
                 <label>报考等级：</label>
@@ -102,6 +119,14 @@ function _initGUI() {
                     <option value="5">N5</option>
                 </select>
                 <a href="https://jlpt.neea.cn/kdinfo.do?kdid=info" target="_blank" style="margin-left: 5px">查看考场列表</a>
+            </div>
+            <div style="margin: 10px">
+                <label >证件号：</label>
+                <input id="tool-username" style="width: 150px" onchange="_onUsernameChange(document.getElementById('tool-username').value)">                
+            </div>
+            <div style="margin: 10px">
+                <label >密　码：</label>
+                <input id="tool-password" style="width: 150px" onchange="_onPasswordChange(document.getElementById('tool-password').value)">                
             </div>
             <div style="margin: 10px">
                 <label>改座模式：</label>
@@ -137,13 +162,15 @@ function _initGUI() {
             <div style="margin: 10px">
                 <label>日志：</label>
                 <button onclick="_clearLog()" style="margin-left: 10px">清空</button>
-                <textarea id="tool-log" rows="25" wrap="off" style="resize: none; width: 100%"></textarea>
+                <textarea id="tool-log" wrap="off" style="resize: none; width: 100%; height: 500px"></textarea>
             </div>
         </div>
         `;
         document.body.append(toolWindow);
 
         document.getElementById('tool-examLevel').value = examLevel;
+        document.getElementById('tool-username').value = _username;
+        document.getElementById('tool-password').value = _password;
         document.getElementById('tool-changeSeat').checked = isChangeSeat;
         document.getElementById('tool-fastTryAddr').value = fastTryAddr.join(",");
         document.getElementById('tool-targetAddr').value = targetAddr.join(",");
@@ -167,6 +194,14 @@ function _initGUI() {
             // 当鼠标松开时
             document.addEventListener('mouseup', _stopDragWindow);
         });
+    }
+}
+
+function _closeGUI() {
+    if (toolWindow) {
+        stop();
+        toolWindow.remove();
+        toolWindow = null;
     }
 }
 
@@ -212,6 +247,130 @@ async function _delay(timeountMS) {
     });
 }
 
+async function _login(code) {
+    return new Promise((fin) => {
+        if (!_username || !_password) {
+            _log("请输入证件号和密码用于登录");
+            canExit = true;
+            fin(null);
+        }
+
+        let timeout = 5000;
+        let timer = setTimeout(() => {
+            timer = null;
+            _log('login.do timed out after ' + timeout + ' ms');
+            fin(null);
+        }, timeout);
+
+        user.set("ksIdNo", _username);
+        user.set("sFlag", escape(escape(_username)));
+
+        let formData = new FormData();
+        formData.append("ksIDNO", _username);
+        formData.append("ksPwd", _password);
+        formData.append("clientTime", "");
+
+        formData.append("chkImgFlag", user.get("chkImgFlag"));
+        formData.append("chkImgCode", code);
+        formData.append("btnlogin", "登录");
+
+        new Ajax.Request(getURL("login.do"), {
+            method: "post",
+            parameters: new URLSearchParams(formData).toString(),
+            requestHeaders: {
+                RequestType: "ajax"
+            },
+            onSuccess: function (e) {
+                if (timer) {
+                    clearTimeout(timer);
+                    timer = null;
+                } else {
+                    return;
+                }
+                var f = e.responseJSON;
+                if (f == null) {
+                    e.request.options.onFailure();
+                    return
+                }
+                clearChkimgCache();
+                _log("login.do", f);
+                if (f.retVal == 0) {
+                    _log("登录失败：" + errorCode[f.errorNum]);
+                } else {
+                    updateUser(f);
+                    user.set("chkImgFlag", escape(escape(user.get("ksIdNo"))));
+                    _log("登录成功");
+                    dispatch();
+                }
+                fin(f);
+            },
+            onFailure: function (g) {
+                if (timer) {
+                    clearTimeout(timer);
+                    timer = null;
+                } else {
+                    return;
+                }
+                _log("登录请求失败");
+                fin(null);
+            }
+        })
+    });
+}
+
+
+async function _getStatus() {
+    return new Promise((fin) => {
+        let timeout = 5000;
+        let timer = setTimeout(() => {
+            timer = null;
+            _log('status.do timed out after ' + timeout + ' ms');
+            fin(null);
+        }, timeout);
+        new Ajax.Request(getURL("status.do"), {
+            method: "post",
+            parameters: serializeUser(["ksid", "ksIdNo", "ksLoginFlag"]),
+            requestHeaders: {
+                RequestType: "ajax"
+            },
+            onSuccess: function (c) {
+                if (timer) {
+                    clearTimeout(timer);
+                    timer = null;
+                } else {
+                    return;
+                }
+                var d = c.responseJSON;
+                if (d == null) {
+                    c.request.options.onFailure();
+                    return
+                }
+                if (d.retVal == 0) {
+                    if (d.errorNum == 101 || d.errorNum == 102) {
+                        //登录已过期，或者在别处登录
+                        user.set("ksLoginFlag", "");
+                    }
+                    _log("status: " + errorCode[d.errorNum]);
+                } else {
+                    updateUser(d);
+                }
+                fin(d);
+            },
+            onFailure: function (g) {
+                if (timer) {
+                    clearTimeout(timer);
+                    timer = null;
+                } else {
+                    return;
+                }
+                _log("获取状态失败");
+                fin(null);
+            }
+        })
+    });
+}
+
+
 var chkImgAnsPromise = null;
 
 function _handleChkImgKeyDown(event) {
@@ -236,20 +395,20 @@ function _handleChkImgKeyDown(event) {
 async function _tryOCR(url) {
     let xhr = new XMLHttpRequest();
     xhr.open('GET', `${ocrUrl}?url=${url}`);
-    xhr.onload = function() {
-      if (xhr.status === 200) {
-        let fin = chkImgAnsPromise;
-        chkImgAnsPromise = null;
-        if (fin) {
-            let ans = xhr.responseText;
-            if (ans.length == 4) {
-                fin(ans.toUpperCase());
-            } else {
-                _log("验证码OCR识别失败");
-                fin(null);
+    xhr.onload = function () {
+        if (xhr.status === 200) {
+            let fin = chkImgAnsPromise;
+            chkImgAnsPromise = null;
+            if (fin) {
+                let ans = xhr.responseText;
+                if (ans.length == 4) {
+                    fin(ans.toUpperCase());
+                } else {
+                    _log("验证码OCR识别失败");
+                    fin(null);
+                }
             }
         }
-      }
     };
     xhr.onerror = () => {
         _log("验证码OCR请求失败");
@@ -302,18 +461,10 @@ async function _refreshImg() {
                     return
                 }
                 user.set("chkImgSrc", h.chkImgFilename);
-                
+
                 chkImgAnsPromise = fin;
 
-                let useOcr = ocrOn && ocrUrl && ocrUrl.length > 0;
-                let startTime = new Date().setHours(startHour, startMinite, startSecond, 0);
-                if (useOcr && new Date().getTime() < startTime) {
-                    //自动识别存在失误的概率，为了增加2点刚开始时候的抢座成功率，手动输入一个正确答案
-                    _log("当前未到订座时间，请手动输入验证码确保成功率");
-                    useOcr = false;
-                }
-
-                if (useOcr) {
+                if (ocrOn && ocrUrl && ocrUrl.length > 0) {
                     _log("尝试自动识别验证码...");
                     _tryOCR(h.chkImgFilename);
                 } else {
@@ -330,7 +481,7 @@ async function _refreshImg() {
                 } else {
                     return;
                 }
-                _log("获取验证码失败，请点击验证码重新获取!");
+                _log("获取验证码失败");
                 fin(null);
             }
         })
@@ -514,6 +665,7 @@ async function loop() {
     let kd = null;
     let fastTryList = fastTryAddr.slice();
     let startTime = new Date().setHours(startHour, startMinite, startSecond, 0);
+    let statusTime = 0;
     let waitHint = false;
 
     _log("开始工作，当前报考等级：" + examLevel);
@@ -532,10 +684,21 @@ async function loop() {
                 answer = null;
             }
         }
-        
+
         if (!answer || answer == "EXIT") {
             canExit = true;
             break;
+        }
+
+        if (!user.get("ksLoginFlag") || user.get("step") == "login") {
+            //未登录
+            _log("开始登录");
+            await _login(answer);
+            answer = null;
+            answerTime = 0;
+            statusTime = 0;
+            waitHint = true;
+            continue;
         }
 
         if (!kd) {
@@ -562,18 +725,31 @@ async function loop() {
                 kd = await _chooseAddr(false);
             }
             if (!kd) {
-                await _delay(1000);
+                if (new Date().getTime() - statusTime > 5000) {
+                    //每5秒刷新一下状态，防止登录过期
+                    await _getStatus();
+                    statusTime = now;
+                } else {
+                    await _delay(1000);
+                }
                 continue;
             }
         }
 
         //只有1个目标考场的时候，因为直接发请求，所以最好等时间到了再继续。
-        if (fastTryList.length > 0 && new Date().getTime() < startTime) {
+        now = new Date().getTime();
+        if (fastTryList.length > 0 && now < startTime) {
             if (!waitHint) {
                 _log(`时间还没到，等到${startHour}:${startMinite}:${startSecond}之后自动开始...`);
                 waitHint = true;
             }
-            await _delay(200);
+            if (startTime - now > 10000 && now - statusTime > 5000) {
+                //距离开始还有10秒以上，每5秒刷新一下状态，防止登录过期
+                await _getStatus();
+                statusTime = now;
+            } else {
+                await _delay(200);
+            }
             continue;
         }
 
@@ -587,6 +763,10 @@ async function loop() {
             _log("订座失败：" + errorCode[r.errorNum]);
             if (r.errorNum == 305 || r.errorNum == 306) {
                 //验证码过期或错误
+            } else if (r.errorNum == 101 || r.errorNum == 102) {
+                //登录已过期，或者在别处登录
+                user.set("ksLoginFlag", "");
+                gotoStep("login");
             } else {
                 kd = null;
                 if (fastTryList.length > 0) {
@@ -628,7 +808,7 @@ async function loop() {
                 }
             } else {
                 _log("预定成功！", kd);
-                _log("请刷新页面后，按提示完成后续付款");
+                gotoStep("status");
                 canExit = true;
                 break;
             }
