@@ -608,12 +608,14 @@ async function loop() {
             if (!r) {
                 continue;
             } else if (r.retVal == 0) {
-                _log("订座查询显示失败", errorCode[r.errorNum]);
                 if (r.errorNum == 310) {
+                    _log("订座排队中...");
                     //重试
                     await _delay(200);
                     continue;
-                } else if (r.errorNum == 313) {
+                }
+                _log("订座查询失败：" + errorCode[r.errorNum]);
+                if (r.errorNum == 313) {
                     //满了
                     kd = null;
                     if (fastTryList.length > 0) {
@@ -626,6 +628,7 @@ async function loop() {
                 }
             } else {
                 _log("预定成功！", kd);
+                _log("请刷新页面后，按提示完成后续付款");
                 canExit = true;
                 break;
             }
