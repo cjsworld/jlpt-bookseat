@@ -57,13 +57,15 @@
 
 ## 使用方法
 
-- 浏览器打开 <https://jlpt.neea.cn/index.do>，登录帐号。
+- 浏览器打开 <https://jlpt.neea.cn/index.do>
 
 - F12打开控制台，会因为无限循环的debugger而进入断点调试。取消断点（Deactivate breakpoints），然后恢复运行（Resume script execution）。
 
     ![截图](screenshot/debug.png)
 
 - 来到Console界面，将`jlpt.js`所有代码粘贴进去，回车，界面上出现窗口。
+
+- 如果不使用自动登录功能，请手动先登录进去。如果使用自动登录，则不需要手动登录，只需要在脚本处填写账号密码，脚本会自动处理。
 
 - 调整参数，点击开始。
 
