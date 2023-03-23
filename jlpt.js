@@ -281,16 +281,16 @@ async function _login(code) {
                 RequestType: "ajax"
             },
             onSuccess: function (e) {
+                var f = e.responseJSON;
+                if (f == null) {
+                    e.request.options.onFailure();
+                    return
+                }
                 if (timer) {
                     clearTimeout(timer);
                     timer = null;
                 } else {
                     return;
-                }
-                var f = e.responseJSON;
-                if (f == null) {
-                    e.request.options.onFailure();
-                    return
                 }
                 clearChkimgCache();
                 _log("login.do", f);
@@ -334,16 +334,16 @@ async function _getStatus() {
                 RequestType: "ajax"
             },
             onSuccess: function (c) {
+                var d = c.responseJSON;
+                if (d == null) {
+                    c.request.options.onFailure();
+                    return
+                }
                 if (timer) {
                     clearTimeout(timer);
                     timer = null;
                 } else {
                     return;
-                }
-                var d = c.responseJSON;
-                if (d == null) {
-                    c.request.options.onFailure();
-                    return
                 }
                 if (d.retVal == 0) {
                     if (d.errorNum == 101 || d.errorNum == 102) {
@@ -443,16 +443,16 @@ async function _refreshImg() {
                 RequestType: "ajax"
             },
             onSuccess: function (g) {
+                let h = g.responseJSON;
+                if (h == null) {
+                    g.request.options.onFailure();
+                    return
+                }
                 if (timer) {
                     clearTimeout(timer);
                     timer = null;
                 } else {
                     return;
-                }
-                let h = g.responseJSON;
-                if (h == null) {
-                    g.request.options.onFailure();
-                    return
                 }
                 _log("chkImg.do", h);
                 if (!h.retVal) {
@@ -504,16 +504,16 @@ async function _chooseAddr(onlyQuery) {
                 RequestType: "ajax"
             },
             onSuccess: function (originalRequest) {
+                let jsonObj = eval(originalRequest.responseText);
+                if (jsonObj == null) {
+                    originalRequest.request.options.onFailure();
+                    return
+                }
                 if (timer) {
                     clearTimeout(timer);
                     timer = null;
                 } else {
                     return;
-                }
-                let jsonObj = eval(originalRequest.responseText);
-                if (jsonObj == null) {
-                    originalRequest.request.options.onFailure();
-                    return
                 }
                 let kdInfo = $A(jsonObj);
                 let canBookList = {};
@@ -582,16 +582,16 @@ async function _bookseat(kd, code) {
                 _log("定座请求发送中...", kd);
             },
             onSuccess: function (e) {
+                let h = e.responseJSON;
+                if (h == null) {
+                    e.request.options.onFailure();
+                    return
+                }
                 if (timer) {
                     clearTimeout(timer);
                     timer = null;
                 } else {
                     return;
-                }
-                let h = e.responseJSON;
-                if (h == null) {
-                    e.request.options.onFailure();
-                    return
                 }
                 _log(isChangeSeat ? "changebook.do" : "book.do", h);
                 clearChkimgCache();
@@ -629,16 +629,16 @@ async function _queryBook() {
                 _log("定座请求结果查询中...");
             },
             onSuccess: function (l) {
+                let m = l.responseJSON;
+                if (m == null) {
+                    l.request.options.onFailure();
+                    return
+                }
                 if (timer) {
                     clearTimeout(timer);
                     timer = null;
                 } else {
                     return;
-                }
-                let m = l.responseJSON;
-                if (m == null) {
-                    l.request.options.onFailure();
-                    return
                 }
                 _log("queryBook.do", m);
                 fin(m);
@@ -697,7 +697,7 @@ async function loop() {
             answer = null;
             answerTime = 0;
             statusTime = 0;
-            waitHint = true;
+            waitHint = false;
             continue;
         }
 
