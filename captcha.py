@@ -5,8 +5,8 @@ import ddddocr
 
 app = Flask(__name__)
 
-ocr_beta = ddddocr.DdddOcr(beta=True, show_ad=False)
-ocr_old = ddddocr.DdddOcr(beta=False, show_ad=False)
+ocr_beta = ddddocr.DdddOcr(old=False, show_ad=False)
+ocr_old = ddddocr.DdddOcr(old=True, show_ad=False)
 
 @app.route('/ocr')
 @cross_origin()
