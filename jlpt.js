@@ -1,3 +1,5 @@
+const toolVersion = "2023 v1.0"
+
 var examLevel = localStorage.getItem("tool_examLevel");
 if (!examLevel) {
     examLevel = 1;
@@ -68,6 +70,54 @@ function _onTargetAddrHelp() {
     alert("填写考点代号，用英文逗号分隔，例如：\n\n1020101,1020103,1020105\n\n会通过接口去查询哪个有空座，然后按照列表的优先顺序选择有空座的考场。");
 }
 
+var ajaxTimeout = localStorage.getItem("tool_ajaxTimeout");
+if (!ajaxTimeout) {
+    ajaxTimeout = 2000;
+} else {
+    ajaxTimeout = parseInt(ajaxTimeout);
+}
+
+function _onAjaxTimeoutChange(v) {
+    ajaxTimeout = parseInt(v);
+    localStorage.setItem("tool_ajaxTimeout", ajaxTimeout);
+}
+
+function _onAjaxTimeoutHelp() {
+    alert("用于查询请求以及验证码之类的请求超时");
+}
+
+var ajaxTimeoutCritical = localStorage.getItem("tool_ajaxTimeoutCritical");
+if (!ajaxTimeoutCritical) {
+    ajaxTimeoutCritical = 10000;
+} else {
+    ajaxTimeoutCritical = parseInt(ajaxTimeoutCritical);
+}
+
+function _onAjaxTimeoutCriticalChange(v) {
+    ajaxTimeoutCritical = parseInt(v);
+    localStorage.setItem("tool_ajaxTimeoutCritical", ajaxTimeoutCritical);
+}
+
+function _onAjaxTimeoutCriticalHelp() {
+    alert("用于登录请求和订座请求的超时");
+}
+
+var pollInterval = localStorage.getItem("tool_pollInterval");
+if (!pollInterval) {
+    pollInterval = 700;
+} else {
+    pollInterval = parseInt(pollInterval);
+}
+
+function _onPollIntervalChange(v) {
+    pollInterval = parseInt(v);
+    localStorage.setItem("tool_pollInterval", pollInterval);
+}
+
+function _onPollIntervalHelp() {
+    alert("控制多长时间查询一次空余考位（服务器有限流，小于500ms可能会导致请求报400）");
+}
+
 var ocrOn = localStorage.getItem("tool_ocrOn") == "true";
 
 function _onIsOcrOnChange(v) {
@@ -102,10 +152,10 @@ function _initGUI() {
     if (!toolWindow) {
         toolWindow = document.createElement("div");
         toolWindow.id = "tool-window";
-        toolWindow.style = "position: absolute; right: 50px; bottom: 50px; width: 700px; height: 600px; background-color: #ccc; z-index: 999";
+        toolWindow.style = "position: absolute; right: 50px; bottom: 50px; width: 700px; height: 620px; background-color: #ccc; z-index: 999";
         toolWindow.innerHTML = `
         <div id="tool-title" style="background-color: aqua; margin: 5px; text-align:center; cursor: move">
-            <div>JLPT抢座脚本(可拖动)</div>
+            <div>JLPT抢座脚本 ${toolVersion} (可拖动)</div>
             <button onclick="_closeGUI()" style="position: absolute; right: 5px; top: 5px">X</button>
         </div>
         <div style="width: 250px; display: inline-block; vertical-align: top">
@@ -131,17 +181,30 @@ function _initGUI() {
             <div style="margin: 10px">
                 <label>改座模式：</label>
                 <input id="tool-changeSeat" type="checkbox" onchange="_onIsChangeSeatChange(document.getElementById('tool-changeSeat').checked)">启用</input>
-                <a onclick="_onIsChangeSeatHelp()" style="cursor: pointer; margin-left: 10px">？</a>
+                <a onclick="_onIsChangeSeatHelp()" style="cursor: pointer; margin-left: 10px">�</a>
             </div>
             <div style="margin: 10px">
                 <label>快速抢座考场：</label>
-                <a onclick="_onFastTryAddrHelp()" style="cursor: pointer">？</a>
+                <a onclick="_onFastTryAddrHelp()" style="cursor: pointer">�</a>
                 <textarea id="tool-fastTryAddr" rows="5" style="resize: none; width: 100%;" onchange="_onFastTryAddrChange(document.getElementById('tool-fastTryAddr').value)"></textarea>
             </div>
             <div style="margin: 10px">
                 <label>目标考场：</label>
-                <a onclick="_onTargetAddrHelp()" style="cursor: pointer">？</a>
+                <a onclick="_onTargetAddrHelp()" style="cursor: pointer">�</a>
                 <textarea id="tool-targetAddr" rows="5" style="resize: none; width: 100%;" onchange="_onTargetAddrChange(document.getElementById('tool-targetAddr').value)"></textarea>
+            </div>
+            <div style="margin: 10px">
+                <label>查询请求超时(ms)：</label>
+                <input id="tool-ajaxTimeout" style="width: 50px" onchange="_onAjaxTimeoutChange(document.getElementById('tool-ajaxTimeout').value)">
+                <a onclick="_onAjaxTimeoutHelp()" style="cursor: pointer; margin-left: 10px">�</a>
+                <br/>
+                <label>订座请求超时(ms)：</label>
+                <input id="tool-ajaxCriticalTimeout" style="width: 50px" onchange="_onAjaxTimeoutCriticalChange(document.getElementById('tool-ajaxCriticalTimeout').value)">
+                <a onclick="_onAjaxTimeoutCriticalHelp()" style="cursor: pointer; margin-left: 10px">�</a>
+                <br/>
+                <label>轮询请求间隔(ms)：</label>
+                <input id="tool-pollInterval" value="700" style="width: 50px" onchange="_onPollIntervalChange(document.getElementById('tool-pollInterval').value)">
+                <a onclick="_onPollIntervalHelp()" style="cursor: pointer; margin-left: 10px">�</a>
             </div>
             <div style="margin: 10px">
                 <button id="tool-start" onclick="start()" style="margin: 10px">开始</label>
@@ -153,7 +216,7 @@ function _initGUI() {
                 <label>答案(回车提交)：</label>
                 <input id="tool-chkImgAns" style="width: 100px" onkeydown="_handleChkImgKeyDown(event)"></input>
                 <label>自动识别：</label>
-                <a onclick="_onOcrHelp()" style="cursor: pointer">？</a>
+                <a onclick="_onOcrHelp()" style="cursor: pointer">�</a>
                 <input id="tool-ocrOn" type="checkbox" onchange="_onIsOcrOnChange(document.getElementById('tool-ocrOn').checked)">启用</input><br/>
                 <input id="tool-ocrUrl" style="width: 100%" onchange="_onOcrUrlChange(document.getElementById('tool-ocrUrl').value)"></input>
             </div>
@@ -162,7 +225,7 @@ function _initGUI() {
             <div style="margin: 10px">
                 <label>日志：</label>
                 <button onclick="_clearLog()" style="margin-left: 10px">清空</button>
-                <textarea id="tool-log" wrap="off" style="resize: none; width: 100%; height: 500px"></textarea>
+                <textarea id="tool-log" wrap="off" style="resize: none; width: 100%; height: 530px"></textarea>
             </div>
         </div>
         `;
@@ -174,6 +237,9 @@ function _initGUI() {
         document.getElementById('tool-changeSeat').checked = isChangeSeat;
         document.getElementById('tool-fastTryAddr').value = fastTryAddr.join(",");
         document.getElementById('tool-targetAddr').value = targetAddr.join(",");
+        document.getElementById('tool-ajaxTimeout').value = ajaxTimeout;
+        document.getElementById('tool-ajaxCriticalTimeout').value = ajaxTimeoutCritical;
+        document.getElementById('tool-pollInterval').value = pollInterval;
         document.getElementById('tool-ocrOn').checked = ocrOn;
         document.getElementById('tool-ocrUrl').value = ocrUrl;
         document.getElementById('tool-stop').disabled = true;
@@ -255,7 +321,7 @@ async function _login(code) {
             fin(null);
         }
 
-        let timeout = 5000;
+        let timeout = ajaxTimeoutCritical;
         let timer = setTimeout(() => {
             timer = null;
             _log('login.do timed out after ' + timeout + ' ms');
@@ -321,7 +387,7 @@ async function _login(code) {
 
 async function _getStatus() {
     return new Promise((fin) => {
-        let timeout = 5000;
+        let timeout = ajaxTimeout;
         let timer = setTimeout(() => {
             timer = null;
             _log('status.do timed out after ' + timeout + ' ms');
@@ -430,7 +496,7 @@ async function _refreshImg() {
             a = generateRandomFlag(18);
             user.set("chkImgFlag", a)
         }
-        let timeout = 2000;
+        let timeout = ajaxTimeout;
         let timer = setTimeout(() => {
             timer = null;
             _log('chkImg.do timed out after ' + timeout + ' ms');
@@ -491,7 +557,7 @@ async function _refreshImg() {
 var kdInfos = {};
 async function _chooseAddr(onlyQuery) {
     return new Promise((fin) => {
-        let timeout = 3000;
+        let timeout = ajaxTimeout;
         let timer = setTimeout(() => {
             timer = null;
             _log('chooseAddr.do timed out after ' + timeout + ' ms');
@@ -558,7 +624,7 @@ async function _chooseAddr(onlyQuery) {
 
 async function _bookseat(kd, code) {
     return new Promise((fin) => {
-        let timeout = 5000;
+        let timeout = ajaxTimeoutCritical;
         let timer = setTimeout(() => {
             timer = null;
             _log('book.do timed out after ' + timeout + ' ms');
@@ -613,7 +679,7 @@ async function _bookseat(kd, code) {
 
 async function _queryBook() {
     return new Promise((fin) => {
-        let timeout = 5000;
+        let timeout = ajaxTimeout;
         let timer = setTimeout(() => {
             timer = null;
             _log('queryBook.do timed out after ' + timeout + ' ms');
@@ -729,14 +795,15 @@ async function loop() {
                     //每5秒刷新一下状态，防止登录过期
                     await _getStatus();
                     statusTime = now;
+                    //getStatus是网络请求，消耗多少时间未知，这里就不delay了
                 } else {
-                    await _delay(1000);
+                    await _delay(pollInterval);
                 }
                 continue;
             }
         }
 
-        //只有1个目标考场的时候，因为直接发请求，所以最好等时间到了再继续。
+        //快速订座的时候，因为直接发请求，所以最好等时间到了再继续。
         now = new Date().getTime();
         if (fastTryList.length > 0 && now < startTime) {
             if (!waitHint) {
