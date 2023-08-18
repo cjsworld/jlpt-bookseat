@@ -67,16 +67,27 @@
     - 有关库本身的的问题，请移步 https://github.com/sml2h3/ddddocr
     - 也可以采用自行采用其他库，或者在线API服务。
 
-- 准备python3环境
+- 准备`python3`环境
 
-- 安装依赖：`pip3 install -r requirements.txt`
+- 安装依赖
+    ```
+    pip3 install -r requirements.txt
+    ```
 
-    - 如果下载速度太慢，可以换国内源：`pip3 config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
-`
+    - 如果下载速度太慢，可以换国内源
+    ```
+    pip3 config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+    ```
 
-- 运行：`python3 captcha.py`，确认输出正常无报错。
+- 运行，确认输出正常无报错
+    ```
+    python3 captcha.py
+    ```
 
-- 如果是Mac M1/M2芯片，需要以x86_64架构运行python，在命令前面加上`arch --arch=x86_64`即可：`arch --arch=x86_64 python3 captcha.py`
+- 如果是Mac M1/M2芯片，需要以x86_64架构运行python，在命令前面加上`arch --arch=x86_64`即可
+    ```
+    arch --arch=x86_64 python3 captcha.py
+    ```
 
 - 如果遇到报错`DdddOcr.init() got an unexpected keyword argument 'beta'`，可能是ddddocr版本问题，检查是否1.4.7版本。实在不行，可以把beta参数去掉。
 
