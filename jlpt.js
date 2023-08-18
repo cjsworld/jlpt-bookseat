@@ -460,6 +460,7 @@ function _handleChkImgKeyDown(event) {
 
 async function _tryOCR(url) {
     let xhr = new XMLHttpRequest();
+    url = encodeURIComponent(url);
     xhr.open('GET', `${ocrUrl}?url=${url}`);
     xhr.onload = function () {
         if (xhr.status === 200) {

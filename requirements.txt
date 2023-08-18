@@ -1,0 +1,5 @@
+Pillow<=9.5.0
+ddddocr==1.4.7
+requests
+flask
+flask_cors

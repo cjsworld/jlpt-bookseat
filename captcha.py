@@ -17,14 +17,14 @@ def get_verification_code():
     #验证码是4位大写字母，如果不是，说明识别错误
     
     result = ocr_beta.classification(response.content)
-    print("ocr_beta: " + result);
+    print("ocr_beta: " + result)
     if len(result) == 4 and result.isalpha():
-        return result
+        return result.upper()
     
     result = ocr_old.classification(response.content)
-    print("ocr_old: " + result);
+    print("ocr_old: " + result)
     if len(result) == 4 and result.isalpha():
-        return result
+        return result.upper()
     
     return ""
 

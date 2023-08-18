@@ -53,12 +53,32 @@
     - 这里刷出验证码之后，不要在原来的界面上刷新验证码。
 
 - 验证码自动识别
-    - 可参考后面的说明，搭建自动识别验证码的服务。
+    - 需要参考后面的说明，搭建自动识别验证码的服务。
     - 自动识别准确率有限，网络高峰期可能导致刷新验证码较慢。
 
 - 日志显示
     - 显示过程中的日志。
     - 如果觉得窗口小，console控制台也会有一样的输出。
+
+## 验证码自动识别
+
+- 验证码识别采用ddddocr库来实现，准确率大概60%左右。
+
+    - 有关库本身的的问题，请移步 https://github.com/sml2h3/ddddocr
+    - 也可以采用自行采用其他库，或者在线API服务。
+
+- 准备python3环境
+
+- 安装依赖：`pip3 install -r requirements.txt`
+
+    - 如果下载速度太慢，可以换国内源：`pip3 config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+`
+
+- 运行：`python3 captcha.py`，确认输出正常无报错。
+
+- 如果是Mac M1/M2芯片，需要以x86_64架构运行python，在命令前面加上`arch --arch=x86_64`即可：`arch --arch=x86_64 python3 captcha.py`
+
+- 如果遇到报错`DdddOcr.init() got an unexpected keyword argument 'beta'`，可能是ddddocr版本问题，检查是否1.4.7版本。实在不行，可以把beta参数去掉。
 
 ## 使用方法
 
@@ -100,11 +120,3 @@
 - 建议提前演练一下，一方面脚本可能有问题，或者网站更新导致功能不可用。
 
 - 如果遇到订座请求（book.do）报400，可能需要注销一下重新登录才能好。
-
-## 验证码自动识别
-
-- 准备python3环境
-
-- 安装依赖：`pip install flask flask_cors requests ddddocr`
-
-- 运行：`python3 captcha.py`
