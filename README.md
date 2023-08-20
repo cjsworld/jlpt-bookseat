@@ -81,12 +81,12 @@
 
 - 运行，确认输出正常无报错
     ```
-    python3 captcha.py
+    python3 captcha_server_ocr.py
     ```
 
 - 如果是Mac M1/M2芯片，需要以x86_64架构运行python，在命令前面加上`arch --arch=x86_64`即可
     ```
-    arch --arch=x86_64 python3 captcha.py
+    arch --arch=x86_64 python3 captcha_server_ocr.py
     ```
 
 - 如果遇到报错`DdddOcr.init() got an unexpected keyword argument 'beta'`，可能是ddddocr版本问题，检查是否1.4.7版本。实在不行，可以把beta参数去掉。
