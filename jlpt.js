@@ -458,15 +458,15 @@ function _handleChkImgKeyDown(event) {
     }
 }
 
-async function _tryOCR(url) {
+function _tryOCR(url) {
     let xhr = new XMLHttpRequest();
     url = encodeURIComponent(url);
     xhr.open('GET', `${ocrUrl}?url=${url}`);
     xhr.onload = function () {
-        if (xhr.status === 200) {
-            let fin = chkImgAnsPromise;
-            chkImgAnsPromise = null;
-            if (fin) {
+        let fin = chkImgAnsPromise;
+        chkImgAnsPromise = null;
+        if (fin) {
+            if (xhr.status === 200) {
                 let ans = xhr.responseText;
                 if (ans.length == 4) {
                     fin(ans.toUpperCase());
@@ -474,6 +474,8 @@ async function _tryOCR(url) {
                     _log("验证码OCR识别失败");
                     fin(null);
                 }
+            } else {
+                fin(null);
             }
         }
     };
