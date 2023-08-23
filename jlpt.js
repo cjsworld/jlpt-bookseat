@@ -1,4 +1,4 @@
-const toolVersion = "2023 v1.0"
+const toolVersion = "2023 v1.1"
 
 var examLevel = localStorage.getItem("tool_examLevel");
 if (!examLevel) {
@@ -140,7 +140,7 @@ function _onOcrHelp() {
 }
 
 //报考开始时间
-const startHour = 14
+const startHour = 7
 const startMinite = 0
 const startSecond = 0
 
